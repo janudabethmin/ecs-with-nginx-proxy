@@ -1,4 +1,4 @@
-# ECS-TF: Terraform Template for ECS with NGINX
+# Terraform Template for ECS with NGINX
 
 > **This is the only open source template for deploying containerized workloads on AWS ECS with NGINX as the reverse proxy, using Terraform. Feel free to use, modify, and share!**
 
