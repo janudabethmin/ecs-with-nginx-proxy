@@ -19,8 +19,8 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "name_prefix" {
-  description = "Prefix for all resource names."
+variable "name" {
+  description = "Name for all resource names."
   type        = string
   default     = "resource"
 }
@@ -29,4 +29,10 @@ variable "tags" {
   description = "A map of tags to apply to all resources."
   type        = map(string)
   default     = {}
+}
+
+variable "desired_count" {
+  description = "Number of ECS tasks to run."
+  type        = number
+  default     = 2
 }

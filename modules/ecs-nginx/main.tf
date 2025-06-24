@@ -8,9 +8,9 @@ resource "aws_ecs_cluster" "this" {
 
 # --- S3 Bucket for nginx.conf ---
 resource "aws_s3_bucket" "nginx_conf" {
-  bucket = format("%s-%s-nginx-conf", var.name_prefix, random_id.suffix.hex)
+  bucket        = format("%s-%s-nginx-conf", var.name_prefix, random_id.suffix.hex)
   force_destroy = true
-  tags = var.tags
+  tags          = var.tags
 }
 
 resource "random_id" "suffix" {
@@ -28,9 +28,9 @@ resource "aws_s3_object" "nginx_conf" {
 
 # --- IAM Role for ECS Task to access S3 ---
 resource "aws_iam_role" "task_execution" {
-  name = "ecsTaskExecutionRole-nginx"
+  name               = "ecsTaskExecutionRole-nginx"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role_policy.json
-  tags = var.tags
+  tags               = var.tags
 }
 
 data "aws_iam_policy_document" "ecs_task_assume_role_policy" {
@@ -57,7 +57,7 @@ resource "aws_iam_policy" "s3_read_nginx_conf" {
 
 data "aws_iam_policy_document" "s3_read" {
   statement {
-    actions = ["s3:GetObject"]
+    actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.nginx_conf.arn}/*"]
   }
 }
@@ -112,13 +112,13 @@ resource "aws_security_group" "ecs_service" {
 
 # --- ALB ---
 resource "aws_lb" "this" {
-  name               = format("%s-%s-alb", var.name_prefix, random_id.suffix.hex)
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = var.public_subnet_ids
+  name                       = format("%s-%s-alb", var.name_prefix, random_id.suffix.hex)
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = var.public_subnet_ids
   enable_deletion_protection = false
-  tags = var.tags
+  tags                       = var.tags
 }
 
 resource "aws_lb_target_group" "this" {
@@ -161,8 +161,8 @@ resource "aws_ecs_task_definition" "nginx" {
 
   container_definitions = jsonencode([
     {
-      name      = "nginx"
-      image     = "public.ecr.aws/nginx/nginx:latest"
+      name       = "nginx"
+      image      = "public.ecr.aws/nginx/nginx:latest"
       entryPoint = ["/bin/sh", "-c"]
       command = [
         "set -ex && apt-get update && apt-get install -y awscli && echo 'ENV:' && env && echo 'Downloading nginx.conf from S3...' && aws s3 cp s3://$NGINX_CONF_BUCKET/$NGINX_CONF_KEY /etc/nginx/nginx.conf || { echo 'S3 download failed!'; exit 1; } && echo '--- /etc/nginx/nginx.conf content ---' && cat /etc/nginx/nginx.conf && echo '--- end nginx.conf ---' && echo 'Validating nginx.conf syntax...' && nginx -t -c /etc/nginx/nginx.conf || { echo 'nginx.conf syntax invalid!'; exit 1; } && echo 'Tailing nginx logs...' && (tail -F /var/log/nginx/access.log /var/log/nginx/error.log &) && echo 'Starting nginx...' && nginx -g 'daemon off;'"
@@ -198,7 +198,7 @@ resource "aws_efs_file_system" "nginx_conf" {
 }
 
 resource "aws_efs_mount_target" "nginx_conf" {
-  for_each = toset(var.private_subnet_ids)
+  for_each        = toset(var.private_subnet_ids)
   file_system_id  = aws_efs_file_system.nginx_conf.id
   subnet_id       = each.value
   security_groups = [aws_security_group.ecs_service.id]
