@@ -10,20 +10,6 @@ This repository provides an example of using Terraform to deploy an NGINX servic
 - **Sample Usage**: Example configuration and variables for rapid deployment.
 - **Custom NGINX Config**: Override default NGINX settings with your own `nginx.conf`.
 
-## Directory Structure
-```
-.
-├── example/                # Example implementation using the ECS module
-│   ├── main.tf             # Main Terraform configuration
-│   ├── variables.tf        # Input variables
-│   ├── outputs.tf          # Output values
-│   ├── terraform.tfvars    # Example variable values
-│   └── nginx.conf          # Custom NGINX configuration
-└── modules/
-    └── ecs-nginx/          # Reusable ECS module
-        └── main.tf         # Module logic
-```
-
 ## Getting Started
 1. **Clone the repository**
    ```sh
