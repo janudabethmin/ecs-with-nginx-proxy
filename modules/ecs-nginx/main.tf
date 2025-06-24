@@ -189,10 +189,6 @@ resource "aws_ecs_task_definition" "nginx" {
   # No volumes or mountPoints needed for Fargate
 }
 
-
-# Removed EFS for nginx.conf (production: config is downloaded to container local path)
-
-
 # --- EFS for nginx.conf (mounted by ECS) ---
 resource "aws_efs_file_system" "nginx_conf" {
   creation_token = format("%s-%s-nginx-conf-efs", var.name_prefix, random_id.suffix.hex)
@@ -255,6 +251,7 @@ resource "aws_cloudwatch_log_group" "nginx" {
   retention_in_days = 7
   tags              = var.tags
 }
+
 # --- AWS Region Variable ---
 variable "aws_region" {
   description = "AWS region for resources."
