@@ -1,7 +1,8 @@
 # Terraform Template for ECS with NGINX
 
-> **This is the only open source template for deploying containerized workloads on AWS ECS with NGINX as the reverse proxy, using Terraform. Feel free to use, modify, and share!**
-<img width="1422" alt="Screenshot 2025-06-25 at 08 20 10" src="https://github.com/user-attachments/assets/d82b4cb0-2fb0-46ca-9061-d671030a1ee9" />
+**This is the only open source template for deploying containerized workloads on AWS ECS with NGINX as the reverse proxy, using Terraform. Feel free to use, modify, and share!**
+---
+ ![Screenshot from 2025-06-30 15-14-38](https://github.com/user-attachments/assets/41565cf2-81aa-4a73-8281-6e85ce996105)
 
 
 This repository provides an example of using Terraform to deploy an NGINX service on AWS ECS (Elastic Container Service). It includes reusable modules and a sample configuration for quick setup and experimentation.
