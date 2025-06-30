@@ -5,6 +5,11 @@ output "alb_dns_name" {
   value       = aws_lb.this.dns_name
 }
 
+output "alb_fqdn" {
+  description = "The FQDN (custom DNS name) for the ALB, if HTTPS/DNS is enabled."
+  value       = var.hosted_zone_name != null ? local.fqdn : null
+}
+
 output "nginx_conf_etag" {
   description = "ETag of the nginx.conf S3 object. Use as a trigger for forced ECS redeployments."
   value       = aws_s3_object.nginx_conf.etag

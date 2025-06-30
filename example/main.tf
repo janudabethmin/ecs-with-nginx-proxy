@@ -13,6 +13,8 @@ module "ecs_nginx" {
   aws_region         = var.aws_region
   tags               = var.tags
   nginx_conf_path    = "${path.module}/nginx.conf"
+  hosted_zone_name = var.hosted_zone_name
+  hosted_zone_name_prefix = var.hosted_zone_name_prefix
 }
 
 

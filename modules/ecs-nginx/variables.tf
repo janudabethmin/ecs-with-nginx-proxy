@@ -44,3 +44,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "hosted_zone_name" {
+  description = "(Optional) Route 53 hosted zone name for DNS/HTTPS setup. If set, ACM certificate, HTTPS listener, and DNS record will be created."
+  type        = string
+  default     = null
+}
+
+variable "hosted_zone_name_prefix" {
+  description = "(Optional) Prefix for the DNS record in the hosted zone, e.g. 'app' for app.mydomain.com. Defaults to 'nginx' if not set."
+  type        = string
+  default     = "nginx"
+}

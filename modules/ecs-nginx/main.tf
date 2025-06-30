@@ -28,7 +28,7 @@ resource "aws_s3_object" "nginx_conf" {
 
 # --- IAM Role for ECS Task to access S3 ---
 resource "aws_iam_role" "task_execution" {
-  name               = "ecsTaskExecutionRole-nginx"
+  name               = format("ecsTaskExecutionRole-nginx-%s", random_id.suffix.hex)
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role_policy.json
   tags               = var.tags
 }
@@ -49,7 +49,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
 }
 
 resource "aws_iam_policy" "s3_read_nginx_conf" {
-  name        = "nginx-conf-read-policy"
+  name        = format("nginx-conf-read-policy-%s", random_id.suffix.hex)
   description = "Allow ECS task to read nginx.conf from S3"
   policy      = data.aws_iam_policy_document.s3_read.json
   tags        = var.tags
@@ -68,19 +68,27 @@ resource "aws_iam_role_policy_attachment" "s3_read_attach" {
 }
 
 # --- Security Groups ---
+# ALB Security Group: Allow HTTP/HTTPS from anywhere
 resource "aws_security_group" "alb" {
   name        = format("%s-%s-alb-sg", var.name_prefix, random_id.suffix.hex)
-  description = "Allow HTTP inbound traffic"
+  description = "Allow HTTP/HTTPS inbound traffic"
   vpc_id      = var.vpc_id
   tags        = var.tags
 
   ingress {
+    description = "Allow HTTP from anywhere"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
+  ingress {
+    description = "Allow HTTPS from anywhere"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -89,6 +97,72 @@ resource "aws_security_group" "alb" {
   }
 }
 
+
+# ACM, DNS, HTTPS listener (conditional)
+locals {
+  fqdn = var.hosted_zone_name != null ? "${var.hosted_zone_name_prefix}.${var.hosted_zone_name}" : null
+}
+
+data "aws_route53_zone" "this" {
+  count = var.hosted_zone_name != null ? 1 : 0
+  name  = var.hosted_zone_name
+}
+
+resource "aws_acm_certificate" "this" {
+  count                     = var.hosted_zone_name != null ? 1 : 0
+  domain_name               = local.fqdn
+  validation_method         = "DNS"
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "cert_validation" {
+  for_each = var.hosted_zone_name != null ? {
+    for dvo in aws_acm_certificate.this[0].domain_validation_options : dvo.domain_name => dvo
+  } : {}
+  zone_id = data.aws_route53_zone.this[0].zone_id
+  name    = each.value.resource_record_name
+  type    = each.value.resource_record_type
+  records = [each.value.resource_record_value]
+  ttl     = 60
+}
+
+
+resource "aws_acm_certificate_validation" "this" {
+  count                   = var.hosted_zone_name != null ? 1 : 0
+  certificate_arn         = aws_acm_certificate.this[0].arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+resource "aws_lb_listener" "https" {
+  count             = var.hosted_zone_name != null ? 1 : 0
+  load_balancer_arn = aws_lb.this.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = aws_acm_certificate_validation.this[0].certificate_arn
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.this.arn
+  }
+  depends_on = [aws_acm_certificate_validation.this]
+}
+
+resource "aws_route53_record" "alb_alias" {
+  count   = var.hosted_zone_name != null ? 1 : 0
+  zone_id = data.aws_route53_zone.this[0].zone_id
+  name    = local.fqdn
+  type    = "A"
+  alias {
+    name                   = aws_lb.this.dns_name
+    zone_id                = aws_lb.this.zone_id
+    evaluate_target_health = true
+  }
+}
+
+
+# ECS Service Security Group: Allow HTTP from ALB SG only
 resource "aws_security_group" "ecs_service" {
   name        = format("%s-%s-ecs-service-sg", var.name_prefix, random_id.suffix.hex)
   description = "Allow traffic from ALB"
@@ -96,12 +170,12 @@ resource "aws_security_group" "ecs_service" {
   tags        = var.tags
 
   ingress {
+    description     = "Allow HTTP from ALB only"
     from_port       = var.container_port
     to_port         = var.container_port
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -109,6 +183,7 @@ resource "aws_security_group" "ecs_service" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 
 # --- ALB ---
 resource "aws_lb" "this" {
