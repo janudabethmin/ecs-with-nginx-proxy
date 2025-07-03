@@ -344,3 +344,24 @@ resource "null_resource" "force_ecs_deploy_on_nginx_conf_change" {
     command = "aws ecs update-service --cluster ${aws_ecs_cluster.this.name} --service ${aws_ecs_service.this.name} --force-new-deployment --region ${var.aws_region}"
   }
 }
+
+# --- ECS Cluster Services Cleanup on Destroy ---
+resource "null_resource" "ecs_services_cleanup" {
+  triggers = {
+    cluster_name = aws_ecs_cluster.this.name
+    region      = var.aws_region
+  }
+  depends_on = [aws_ecs_cluster.this]
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      aws ecs list-services --cluster ${self.triggers.cluster_name} --region ${self.triggers.region} --query "serviceArns[]" --output text | tr '\t' '\n' | while read service_arn; do
+        if [ -n "$service_arn" ]; then
+          aws ecs update-service --cluster ${self.triggers.cluster_name} --service $service_arn --desired-count 0 --force-new-deployment --region ${self.triggers.region}
+          aws ecs delete-service --cluster ${self.triggers.cluster_name} --service $service_arn --force --region ${self.triggers.region}
+        fi
+      done
+    EOT
+  }
+}
