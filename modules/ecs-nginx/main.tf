@@ -1,6 +1,32 @@
 # ECS NGINX Module - main.tf
 
 # --- ECS Cluster ---
+
+# --- Cloud Map Private DNS Namespace for Service Discovery ---
+resource "aws_service_discovery_private_dns_namespace" "nginx" {
+  name        = "nginx.local"
+  description = "Private DNS namespace for ECS services"
+  vpc         = var.vpc_id
+}
+
+# --- Cloud Map Service for NGINX ---
+resource "aws_service_discovery_service" "nginx" {
+  name = "nginx"
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.nginx.id
+    dns_records {
+      type = "A"
+      ttl  = 10
+    }
+    routing_policy = "MULTIVALUE"
+  }
+  health_check_custom_config {}
+
+  lifecycle {
+    ignore_changes = [health_check_custom_config]
+  }
+}
+
 resource "aws_ecs_cluster" "this" {
   name = format("%s-%s-ecs-cluster", var.name_prefix, random_id.suffix.hex)
   tags = var.tags
@@ -316,6 +342,9 @@ resource "aws_ecs_service" "this" {
     target_group_arn = aws_lb_target_group.this.arn
     container_name   = "nginx"
     container_port   = var.container_port
+  }
+  service_registries {
+    registry_arn = aws_service_discovery_service.nginx.arn
   }
   depends_on = [aws_lb_listener.this]
 }
