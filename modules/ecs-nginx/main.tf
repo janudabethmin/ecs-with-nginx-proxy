@@ -7,9 +7,6 @@ resource "aws_service_discovery_private_dns_namespace" "nginx" {
   name        = "nginx.local"
   description = "Private DNS namespace for ECS services"
   vpc         = var.vpc_id
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 # --- Cloud Map Service for NGINX ---
@@ -26,7 +23,6 @@ resource "aws_service_discovery_service" "nginx" {
   health_check_custom_config {}
 
   lifecycle {
-    prevent_destroy = true
     ignore_changes = [health_check_custom_config]
   }
 }
