@@ -27,6 +27,7 @@ resource "aws_service_discovery_service" "nginx" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes = [health_check_custom_config]
   }
 }
 
